@@ -46,9 +46,14 @@ def train(env, nb_epochs, nb_epoch_cycles, render_eval, reward_scale, render, pa
         sess.graph.finalize()
 
         agent.reset()
+        
         obs = env.reset()
+        goal = env.reset_goalstate()
+        goalobs = env.reset_goalobs()
+
         if eval_env is not None:
             eval_obs = eval_env.reset()
+
         done = False
         episode_reward = 0.
         episode_step = 0
@@ -72,6 +77,8 @@ def train(env, nb_epochs, nb_epoch_cycles, render_eval, reward_scale, render, pa
                 for t_rollout in range(nb_rollout_steps):
                     # Predict next action.
                     action, q = agent.pi(obs, apply_noise=True, compute_Q=True)
+                    state = env.get_state()
+                    
                     assert action.shape == env.action_space.shape
 
                     # Execute next action.
@@ -79,6 +86,8 @@ def train(env, nb_epochs, nb_epoch_cycles, render_eval, reward_scale, render, pa
                         env.render()
                     assert max_action.shape == action.shape
                     new_obs, r, done, info = env.step(max_action * action)  # scale for execution in env (as far as DDPG is concerned, every action is in [-1, 1])
+                    new_state = env.get_state()
+
                     t += 1
                     if rank == 0 and render:
                         env.render()
@@ -88,7 +97,7 @@ def train(env, nb_epochs, nb_epoch_cycles, render_eval, reward_scale, render, pa
                     # Book-keeping.
                     epoch_actions.append(action)
                     epoch_qs.append(q)
-                    agent.store_transition(obs, action, r, new_obs, done)
+                    agent.store_transition(obs, action, r, new_obs, done, state, new_state, goal, goalobs)
                     obs = new_obs
 
                     if done:
@@ -103,6 +112,8 @@ def train(env, nb_epochs, nb_epoch_cycles, render_eval, reward_scale, render, pa
 
                         agent.reset()
                         obs = env.reset()
+                        goal = env.reset_goalstate()
+                        goalobs = env.reset_goalobs()
 
                 # Train.
                 epoch_actor_losses = []
