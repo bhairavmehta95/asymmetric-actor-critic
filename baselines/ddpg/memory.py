@@ -40,7 +40,7 @@ def array_min2d(x):
 
 
 class Memory(object):
-    def __init__(self, limit, action_shape, observation_shape):
+    def __init__(self, limit, state_shape, action_shape, observation_shape):
         self.limit = limit
 
         self.observations0 = RingBuffer(limit, shape=observation_shape)
@@ -48,6 +48,12 @@ class Memory(object):
         self.rewards = RingBuffer(limit, shape=(1,))
         self.terminals1 = RingBuffer(limit, shape=(1,))
         self.observations1 = RingBuffer(limit, shape=observation_shape)
+
+        self.states = RingBuffer(limit, shape=state_shape)
+        self.states1 = RingBuffer(limit, shape=state_shape)
+        self.goals = RingBuffer(limit, shape=state_shape)
+        self.goal_observations = RingBuffer(limit, shape=observation_shape)
+        
 
     def sample(self, batch_size):
         # Draw such that we always have a proceeding element.
@@ -59,6 +65,11 @@ class Memory(object):
         reward_batch = self.rewards.get_batch(batch_idxs)
         terminal1_batch = self.terminals1.get_batch(batch_idxs)
 
+        states_batch = self.states.get_batch(batch_idxs)
+        states1_batch - self.states.get_batch(batch_idxs)
+        goals_batch = self.goals.get_batch(batch_idxs)
+        goalobs_batch = self.goal_observations.get_batch(batch_idxs)
+
         result = {
             'obs0': array_min2d(obs0_batch),
             'obs1': array_min2d(obs1_batch),
@@ -66,9 +77,10 @@ class Memory(object):
             'actions': array_min2d(action_batch),
             'terminals1': array_min2d(terminal1_batch),
         }
+
         return result
 
-    def append(self, obs0, action, reward, obs1, terminal1, training=True):
+    def append(self, obs0, action, reward, obs1, terminal1, state, state1, goal, goalobs, training=True):
         if not training:
             return
         
@@ -77,6 +89,11 @@ class Memory(object):
         self.rewards.append(reward)
         self.observations1.append(obs1)
         self.terminals1.append(terminal1)
+
+        self.states.append(state)
+        self.states1.append(state1)
+        self.goals.append(goal)
+        self.goal_observations.append(goalobs)
 
     @property
     def nb_entries(self):

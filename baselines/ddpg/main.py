@@ -55,7 +55,7 @@ def run(env_id, seed, noise_type, layer_norm, evaluation, **kwargs):
             raise RuntimeError('unknown noise type "{}"'.format(current_noise_type))
 
     # Configure components.
-    memory = Memory(limit=int(1e6), action_shape=env.action_space.shape, observation_shape=env.observation_space.shape)
+    memory = Memory(limit=int(1e6), state_shape=state_shape, action_shape=env.action_space.shape, observation_shape=env.observation_space.shape)
     critic = Critic(layer_norm=layer_norm)
     actor = Actor(nb_actions, layer_norm=layer_norm)
 
@@ -95,6 +95,7 @@ def parse_args():
     parser.add_argument('--actor-lr', type=float, default=1e-4)
     parser.add_argument('--critic-lr', type=float, default=1e-3)
     boolean_flag(parser, 'popart', default=False)
+    parser.add_argument('--state-shape', default=(1,)) # TODO
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--reward-scale', type=float, default=1.)
     parser.add_argument('--clip-norm', type=float, default=None)
