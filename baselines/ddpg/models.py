@@ -25,7 +25,7 @@ class Actor(Model):
         self.nb_actions = nb_actions
         self.layer_norm = layer_norm
 
-    def __call__(self, obs, goal, reuse=False):
+    def __call__(self, obs, goalobs, reuse=False):
         with tf.variable_scope(self.name) as scope:
             if reuse:
                 scope.reuse_variables()
@@ -35,17 +35,16 @@ class Actor(Model):
                     inputs=obs,
                     filters=64,
                     kernel_size=2,
-                    name='conv1'
                 )
 
             for i in range(0, 4):
-                goal = tf.layers.conv2d(
-                    inputs=goal,
+                goalobs = tf.layers.conv2d(
+                    inputs=goalobs,
                     filters=64,
                     kernel_size=2,
                 )  
 
-            x = tf.concat([obs, goal], axis=-1)
+            x = tf.concat([obs, goalobs], axis=-1)
 
             x = tf.layers.dense(x, 512)
             x = tf.nn.relu(x)

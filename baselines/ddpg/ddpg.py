@@ -55,9 +55,9 @@ def get_perturbed_actor_updates(actor, perturbed_actor, param_noise_stddev):
 
 
 class DDPG(object):
-    def __init__(self, actor, critic, memory, observation_shape, action_shape, param_noise=None, action_noise=None,
+    def __init__(self, actor, critic, memory, state_shape, observation_shape, action_shape, param_noise=None, action_noise=None,
         gamma=0.99, tau=0.001, normalize_returns=False, enable_popart=False, normalize_observations=True,
-        batch_size=128, observation_range=(-5., 5.), action_range=(-1., 1.), return_range=(-np.inf, np.inf),
+        batch_size=128, state_range=None, observation_range=(-5., 5.), action_range=(-1., 1.), return_range=(-np.inf, np.inf),
         adaptive_param_noise=True, adaptive_param_noise_policy_threshold=.1,
         critic_l2_reg=0., actor_lr=1e-4, critic_lr=1e-3, clip_norm=None, reward_scale=1.):
         # Inputs.
@@ -91,16 +91,30 @@ class DDPG(object):
         self.stats_sample = None
         self.critic_l2_reg = critic_l2_reg
 
+        assert state_range is not None # TODO: pass through env
+
         # Observation normalization.
         if self.normalize_observations:
             with tf.variable_scope('obs_rms'):
                 self.obs_rms = RunningMeanStd(shape=observation_shape)
+
+            with tf.variable_scope('state_rms'):
+                self.state_rms = RunningMeanStd(shape=state_shape)
         else:
             self.obs_rms = None
+
         normalized_obs0 = tf.clip_by_value(normalize(self.obs0, self.obs_rms),
             self.observation_range[0], self.observation_range[1])
         normalized_obs1 = tf.clip_by_value(normalize(self.obs1, self.obs_rms),
             self.observation_range[0], self.observation_range[1])
+        normalized_goalobs = tf.clip_by_value(normalize(self.goalobs, self.obs_rms),
+            self.observation_range[0], self.observation_range[1])
+        normalized_state0 = tf.clip_by_value(normalize(self.state0, self.state_rms),
+            self.state_range[0], self.state_range[1])
+        normalized_state1 = tf.clip_by_value(normalize(self.state1, self.state_rms),
+            self.state_range[0], self.state_range[1])
+        normalized_goal = tf.clip_by_value(normalize(self.goal, self.state_rms),
+            self.state_range[0], self.state_range[1])
 
         # Return normalization.
         if self.normalize_returns:
@@ -118,12 +132,12 @@ class DDPG(object):
         self.target_critic = target_critic
 
         # Create networks and core TF parts that are shared across setup parts.
-        self.actor_tf = actor(normalized_obs0)
-        self.normalized_critic_tf = critic(normalized_obs0, self.actions)
+        self.actor_tf = actor(normalized_obs0, normalized_goalobs)
+        self.normalized_critic_tf = critic(normalized_state0, normalized_goal, self.actions)
         self.critic_tf = denormalize(tf.clip_by_value(self.normalized_critic_tf, self.return_range[0], self.return_range[1]), self.ret_rms)
-        self.normalized_critic_with_actor_tf = critic(normalized_obs0, self.actor_tf, reuse=True)
+        self.normalized_critic_with_actor_tf = critic(normalized_state0, normalized_goal, self.actor_tf, reuse=True)
         self.critic_with_actor_tf = denormalize(tf.clip_by_value(self.normalized_critic_with_actor_tf, self.return_range[0], self.return_range[1]), self.ret_rms)
-        Q_obs1 = denormalize(target_critic(normalized_obs1, target_actor(normalized_obs1)), self.ret_rms)
+        Q_obs1 = denormalize(target_critic(normalized_state1, normalized_goal, target_actor(normalized_obs1, normalized_goalobs)), self.ret_rms)
         self.target_Q = self.rewards + (1. - self.terminals1) * gamma * Q_obs1
 
         # Set up parts.
