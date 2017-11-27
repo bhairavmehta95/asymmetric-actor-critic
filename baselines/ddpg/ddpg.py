@@ -60,9 +60,16 @@ class DDPG(object):
         batch_size=128, state_range=None, observation_range=(-5., 5.), action_range=(-1., 1.), return_range=(-np.inf, np.inf),
         adaptive_param_noise=True, adaptive_param_noise_policy_threshold=.1,
         critic_l2_reg=0., actor_lr=1e-4, critic_lr=1e-3, clip_norm=None, reward_scale=1.):
-        # Inputs.
+
         self.obs0 = tf.placeholder(tf.float32, shape=(None,) + observation_shape, name='obs0')
         self.obs1 = tf.placeholder(tf.float32, shape=(None,) + observation_shape, name='obs1')
+
+        self.state0 = tf.placeholder(tf.float32, shape=(None,) + state_shape, name='state0')
+        self.state1 = tf.placeholder(tf.float32, shape=(None,) + state_shape, name='state1')
+
+        self.goal = tf.placeholder(tf.float32, shape=(None,) + state_shape, name='goal')
+        self.goalobs = tf.placeholder(tf.float32, shape=(None,) + observation_shape, name='goalobs')
+
         self.terminals1 = tf.placeholder(tf.float32, shape=(None, 1), name='terminals1')
         self.rewards = tf.placeholder(tf.float32, shape=(None, 1), name='rewards')
         self.actions = tf.placeholder(tf.float32, shape=(None,) + action_shape, name='actions')
@@ -260,12 +267,12 @@ class DDPG(object):
         self.stats_ops = ops
         self.stats_names = names
 
-    def pi(self, obs, apply_noise=True, compute_Q=True):
+    def pi(self, obs, goalobs, apply_noise=True, compute_Q=True):
         if self.param_noise is not None and apply_noise:
             actor_tf = self.perturbed_actor_tf
         else:
             actor_tf = self.actor_tf
-        feed_dict = {self.obs0: [obs]}
+        feed_dict = {self.obs0: [obs], self.goalobs: [goalobs]}
         if compute_Q:
             action, q = self.sess.run([actor_tf, self.critic_with_actor_tf], feed_dict=feed_dict)
         else:
@@ -279,11 +286,12 @@ class DDPG(object):
         action = np.clip(action, self.action_range[0], self.action_range[1])
         return action, q
 
-    def store_transition(self, obs0, action, reward, obs1, terminal1):
+    def store_transition(self, obs0, action, reward, obs1, terminal1, state0, state1, goal, goalobs):
         reward *= self.reward_scale
-        self.memory.append(obs0, action, reward, obs1, terminal1)
+        self.memory.append(obs0, action, reward, obs1, terminal1, state0, state1, goal, goalobs)
         if self.normalize_observations:
             self.obs_rms.update(np.array([obs0]))
+            self.state_rms.update(np.array([state0]))
 
     def train(self):
         # Get a batch.
@@ -291,10 +299,14 @@ class DDPG(object):
 
         if self.normalize_returns and self.enable_popart:
             old_mean, old_std, target_Q = self.sess.run([self.ret_rms.mean, self.ret_rms.std, self.target_Q], feed_dict={
+                self.state1: batch['state1'],
+                self.goal: batch['goal'],
+                self.goalobs: batch['goalobs'],
                 self.obs1: batch['obs1'],
                 self.rewards: batch['rewards'],
                 self.terminals1: batch['terminals1'].astype('float32'),
             })
+
             self.ret_rms.update(target_Q.flatten())
             self.sess.run(self.renormalize_Q_outputs_op, feed_dict={
                 self.old_std : np.array([old_std]),
@@ -312,6 +324,9 @@ class DDPG(object):
             # assert (np.abs(target_Q - target_Q_new) < 1e-3).all()
         else:
             target_Q = self.sess.run(self.target_Q, feed_dict={
+                self.state1: batch['state1'],
+                self.goal: batch['goal'],
+                self.goalobs: batch['goalobs'],
                 self.obs1: batch['obs1'],
                 self.rewards: batch['rewards'],
                 self.terminals1: batch['terminals1'].astype('float32'),
@@ -321,9 +336,13 @@ class DDPG(object):
         ops = [self.actor_grads, self.actor_loss, self.critic_grads, self.critic_loss]
         actor_grads, actor_loss, critic_grads, critic_loss = self.sess.run(ops, feed_dict={
             self.obs0: batch['obs0'],
+            self.state0: batch['state0'],
+            self.goalobs: batch['goalobs'],
+            self.goal: batch['goal'],
             self.actions: batch['actions'],
             self.critic_target: target_Q,
         })
+        
         self.actor_optimizer.update(actor_grads, stepsize=self.actor_lr)
         self.critic_optimizer.update(critic_grads, stepsize=self.critic_lr)
 

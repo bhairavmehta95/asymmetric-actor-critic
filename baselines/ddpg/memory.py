@@ -65,7 +65,7 @@ class Memory(object):
         reward_batch = self.rewards.get_batch(batch_idxs)
         terminal1_batch = self.terminals1.get_batch(batch_idxs)
 
-        states_batch = self.states.get_batch(batch_idxs)
+        states0_batch = self.states.get_batch(batch_idxs)
         states1_batch - self.states.get_batch(batch_idxs)
         goals_batch = self.goals.get_batch(batch_idxs)
         goalobs_batch = self.goal_observations.get_batch(batch_idxs)
@@ -76,6 +76,10 @@ class Memory(object):
             'rewards': array_min2d(reward_batch),
             'actions': array_min2d(action_batch),
             'terminals1': array_min2d(terminal1_batch),
+            'state0': array_min2d(states0_batch),
+            'state10': array_min2d(states1_batch),
+            'goal': array_min2d(goals_batch),
+            'goalobs': array_min2d(goalobs_batch)
         }
 
         return result
