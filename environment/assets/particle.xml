@@ -1,0 +1,22 @@
+<mujoco>
+    <option timestep="0.005" />
+    <worldbody>
+        <body name="agent" pos="0 0 0">
+            <joint axis="1 0 0" damping="0.1" name="slide0" pos="0 0 0" type="slide"/>
+            <joint axis="0 1 0" damping="0.1" name="slide1" pos="0 0 0" type="slide"/>
+            <geom mass="1.0" pos="0 0 0" rgba="1 0 0 1" size="0.15" type="sphere"/>
+			<camera euler="0 0 0" fovy="90" name="rgb" pos="0 0 2.5"></camera>
+        </body>
+        <body mocap="true" name="mocap" pos="0.5 0.5 0.5">
+			<geom conaffinity="0" contype="0" pos="0 0 0" rgba="1.0 1.0 1.0 0.5" size="0.1 0.1 0.1" type="box"></geom>
+			<geom conaffinity="0" contype="0" pos="0 0 0" rgba="1.0 1.0 1.0 0.5" size="0.2 0.2 0.05" type="box"></geom>
+		</body>
+        <body name="floor" pos="0 0 0.025">
+            <geom condim="3" size="1.0 1.0 0.02" rgba="0 1 0 1" type="box"/>
+        </body>
+    </worldbody>
+    <actuator>
+        <motor gear="2000.0" joint="slide0"/>
+        <motor gear="2000.0" joint="slide1"/>
+    </actuator>
+</mujoco>
