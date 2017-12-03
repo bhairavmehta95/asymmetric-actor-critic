@@ -17,7 +17,7 @@ t = 0
 
 class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self, dist_epsilon=0.1):
-        mujoco_env.MujocoEnv.__init__(self, 'particle.xml', 5)
+        mujoco_env.MujocoEnv.__init__(self, os.path.join(os.getcwd(), 'environment/assets/particle.xml'), 5)
         utils.EzPickle.__init__(self)
         self.state = None
         self.dist_epsilon = dist_epsilon
@@ -89,14 +89,10 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         goal_obs = self._get_image()
 
-        print(self._get_state(), qpos)
-
         return goal_obs
 
 
     def generate_goal(self, e):
-        self.reset()
-
         goalposx = np.random.uniform(low=-2.0, high=2.0)
         goalposy = np.random.uniform(low=-2.0, high=2.0)
 
@@ -108,11 +104,6 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         goal['qvel'] = goalvel
 
         goal_obs = self._set_goal(goal)
-
-        from scipy import misc
-        print('Goal Pos {}'.format(goalpos))
-        misc.imsave('testgoal{}.png'.format(e), goal_obs)
-        print("done")
 
         self.reset()
 
@@ -131,33 +122,3 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.viewer.cam.elevation = -90
         self.viewer.cam.distance = 4.85 
 
-
-def run():
-    env = ParticleEnv()
-    env.reset()
-
-    tmax = 100
-    episodes = 10
-    e = 0
-    while e < episodes:
-        print("new episode")
-
-        goal_obs = env.generate_goal(e)
-
-        t = 0
-
-        while t < tmax:
-            obs = env.render()
-            state = env.state
-            obs, state, r, done = env.step([np.random.uniform(low=1.1, high=1.5), np.random.uniform(low=1.1, high=1.5)])
-
-            if done:
-                print("Done", r)
-                env.reset()
-
-            t += 1
-
-        e += 1
-
-if __name__ == '__main__':
-    run()
