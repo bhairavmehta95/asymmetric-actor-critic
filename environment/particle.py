@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import pickle
 import socket
@@ -40,7 +39,6 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         done = not notdone
 
         image_obs = np.zeros([500, 500, 3])
-
         if self.viewer is not None:
             image_obs = self._get_image()
 
@@ -49,7 +47,7 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def _get_image(self):
         self.render()
-        data = self.viewer.get_image()
+        data = self._get_viewer().get_image()
         
         img_data = data[0]
         width = data[1]
@@ -87,6 +85,38 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         self.goal_state = qpos
         self.set_state(qpos, qvel)
+        self.step(qvel)
+
+        goal_obs = self._get_image()
+
+        print(self._get_state(), qpos)
+
+        return goal_obs
+
+
+    def generate_goal(self, e):
+        self.reset()
+
+        goalposx = np.random.uniform(low=-2.0, high=2.0)
+        goalposy = np.random.uniform(low=-2.0, high=2.0)
+
+        goalpos = np.array([goalposx, goalposy])
+        goalvel = np.zeros(shape=self.model.nq)
+
+        goal = dict()
+        goal['qpos'] = goalpos
+        goal['qvel'] = goalvel
+
+        goal_obs = self._set_goal(goal)
+
+        from scipy import misc
+        print('Goal Pos {}'.format(goalpos))
+        misc.imsave('testgoal{}.png'.format(e), goal_obs)
+        print("done")
+
+        self.reset()
+
+        return goal_obs
 
 
     def reset_model(self):
@@ -111,26 +141,20 @@ def run():
     e = 0
     while e < episodes:
         print("new episode")
-        goalpos = np.random.uniform(size=env.model.nq, low=1.0, high=1.0)
-        goalvel = np.zeros(shape=env.model.nq)
 
-        goal = dict()
-        goal['qpos'] = goalpos
-        goal['qvel'] = goalvel
-
-        goal_obs = env._set_goal(goal)
-        goal_obs = env._get_image()
-
-        env.reset()
+        goal_obs = env.generate_goal(e)
 
         t = 0
 
         while t < tmax:
             obs = env.render()
+            state = env.state
             obs, state, r, done = env.step([np.random.uniform(low=1.1, high=1.5), np.random.uniform(low=1.1, high=1.5)])
+
             if done:
                 print("Done", r)
                 env.reset()
+
             t += 1
 
         e += 1

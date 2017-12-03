@@ -2,7 +2,7 @@
     <option timestep="0.005" />
     <worldbody>
         <geom name="floor" type="plane" size="2 2 2" pos="0 0 0"/>
-        <geom type="plane" size=".1905 .2667 .005"/>
+        <geom type="plane" size="2 2 .005"/>
         <body name="agent" pos="0 0 0.055">
             <joint axis="1 0 0" damping="0.1" name="slide0" pos="0 0 0" type="slide"/>
             <joint axis="0 1 0" damping="0.1" name="slide1" pos="0 0 0" type="slide"/>
