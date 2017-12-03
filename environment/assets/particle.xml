@@ -1,0 +1,16 @@
+<mujoco model="particle">
+    <option timestep="0.005" />
+    <worldbody>
+        <geom name="floor" type="plane" size="2 2 2" pos="0 0 0"/>
+        <geom type="plane" size=".1905 .2667 .005"/>
+        <body name="agent" pos="0 0 0.055">
+            <joint axis="1 0 0" damping="0.1" name="slide0" pos="0 0 0" type="slide"/>
+            <joint axis="0 1 0" damping="0.1" name="slide1" pos="0 0 0" type="slide"/>
+            <geom mass="1.0" pos="0 0 0" rgba="1 0 0 1" size="0.1" type="sphere"/>
+        </body>
+    </worldbody>
+    <actuator>
+        <motor gear="2000.0" joint="slide0"/>
+        <motor gear="2000.0" joint="slide1"/>
+    </actuator>
+</mujoco>
