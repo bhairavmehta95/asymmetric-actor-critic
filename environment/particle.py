@@ -13,13 +13,16 @@ from gym import utils
 from gym.envs.mujoco import mujoco_env
 from scipy import misc
 
-t = 0
 
 class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self, dist_epsilon=0.1):
         mujoco_env.MujocoEnv.__init__(self, os.path.join(os.getcwd(), 'environment/assets/particle.xml'), 5)
         utils.EzPickle.__init__(self)
         self.dist_epsilon = dist_epsilon
+
+        self.viewer = mujoco_py.MjViewer(init_width=100, init_height=100)
+        self.viewer.start()
+        self.viewer.set_model(self.model)
 
         self.state = None
         self.state_dim = self.state_vector().shape
@@ -43,7 +46,7 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         done = not notdone
 
-        image_obs = np.zeros([500, 500, 3])
+        image_obs = np.zeros([100, 100, 3])
         if self.viewer is not None:
             image_obs = self._get_image()
 
@@ -51,6 +54,7 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
 
     def _get_image(self):
+        self.render()
         data = self._get_viewer().get_image()
 
         img_data = data[0]
@@ -104,13 +108,13 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         goalpos = np.array([goalposx, goalposy])
         goalvel = np.zeros(shape=self.model.nq)
 
+        print('Episode: {}, Goal {}'.format(e, goalpos))
+
         goal = dict()
         goal['qpos'] = goalpos
         goal['qvel'] = goalvel
 
         goal_obs = self._set_goal(goal)
-
-        self.reset()
 
         return goal_obs
 
@@ -123,14 +127,7 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
 
     def viewer_setup(self):
-        if self.viewer is None:
-            self.viewer = mujoco_py.MjViewer(init_width=100, init_height=100)
-            self.viewer.start()
-            self.viewer.set_model(self.model)
-
         self.viewer.cam.trackbodyid = 0
         self.viewer.cam.elevation = -90
         self.viewer.cam.distance = 4.85 
-        self.viewer.cam.height = 100
-        self.viewer.cam.width = 100
 
