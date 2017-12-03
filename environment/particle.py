@@ -17,10 +17,11 @@ from scipy import misc
 t = 0
 
 class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self):
+    def __init__(self, dist_epsilon=0.1):
         mujoco_env.MujocoEnv.__init__(self, 'particle.xml', 5)
         utils.EzPickle.__init__(self)
         self.state = None
+        self.dist_epsilon = dist_epsilon
 
 
     def _step(self, a):
@@ -29,8 +30,12 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.state = state = self.state_vector()
 
         notdone = np.isfinite(state).all() \
-            and state[2] >= 0.2 and state[2] <= 1.0
+            and not self._at_goal() and not self._escaped()
+
         reward = 0
+
+        if self._at_goal():
+            reward = 1
 
         done = not notdone
 
@@ -56,22 +61,32 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return image_obs
 
 
+    def _get_state(self, body='agent'):
+        state = self.get_body_com(body)[:2]
+        return state
+
 
     def _at_goal(self):
-        pass
+        try:
+            self.goal_state
+        except:
+            return False
+
+        return np.linalg.norm(self._get_state() - self.goal_state) \
+            < self.dist_epsilon
 
 
     def _escaped(self):
-        pass
+        state = self._get_state()
+        return state.any() > 2
 
 
-    def _get_goal(self, goal):
+    def _set_goal(self, goal):
         qpos = goal['qpos']
         qvel = goal['qvel']
 
+        self.goal_state = qpos
         self.set_state(qpos, qvel)
-        goal_obs = self._get_image()
-        return goal_obs
 
 
     def reset_model(self):
@@ -91,30 +106,34 @@ def run():
     env = ParticleEnv()
     env.reset()
 
-    goalpos = np.random.uniform(size=env.model.nq, low=1.1, high=1.4)
-    goalvel = np.zeros(shape=env.model.nq)
+    tmax = 100
+    episodes = 10
+    e = 0
+    while e < episodes:
+        print("new episode")
+        goalpos = np.random.uniform(size=env.model.nq, low=1.0, high=1.0)
+        goalvel = np.zeros(shape=env.model.nq)
 
-    goal = dict()
-    goal['qpos'] = goalpos
-    goal['qvel'] = goalvel
-    goal_obs = env._get_goal(goal)
+        goal = dict()
+        goal['qpos'] = goalpos
+        goal['qvel'] = goalvel
 
-    env.reset()
+        goal_obs = env._set_goal(goal)
+        goal_obs = env._get_image()
 
-    t = 0
+        env.reset()
 
-    action = None
-    while True:
-        obs = env.render()
+        t = 0
 
-        # print(width, height)
-        # print(obs)
+        while t < tmax:
+            obs = env.render()
+            obs, state, r, done = env.step([np.random.uniform(low=1.1, high=1.5), np.random.uniform(low=1.1, high=1.5)])
+            if done:
+                print("Done", r)
+                env.reset()
+            t += 1
 
-        obs, state, r, done = env.step(np.random.uniform(low=-0.1, high=0.1))
-        if done:
-            # print('boop!')
-            env.reset()
-        t += 1
+        e += 1
 
 if __name__ == '__main__':
     run()
