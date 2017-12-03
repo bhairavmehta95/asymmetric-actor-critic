@@ -19,8 +19,13 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self, dist_epsilon=0.1):
         mujoco_env.MujocoEnv.__init__(self, os.path.join(os.getcwd(), 'environment/assets/particle.xml'), 5)
         utils.EzPickle.__init__(self)
-        self.state = None
         self.dist_epsilon = dist_epsilon
+
+        self.state = None
+        self.state_dim = self.state_vector().shape
+        high = np.inf*np.ones(self.state_dim)
+        low = -high
+        self.state_space = spaces.Box(low, high)
 
 
     def _step(self, a):
@@ -46,12 +51,12 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
 
     def _get_image(self):
-        self.render()
         data = self._get_viewer().get_image()
-        
+
         img_data = data[0]
         width = data[1]
         height = data[2]
+
         tmp = np.fromstring(img_data, dtype=np.uint8)
         image_obs = np.reshape(tmp, [height, width, 3])
         image_obs = np.flipud(image_obs)
@@ -118,7 +123,14 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
 
     def viewer_setup(self):
+        if self.viewer is None:
+            self.viewer = mujoco_py.MjViewer(init_width=100, init_height=100)
+            self.viewer.start()
+            self.viewer.set_model(self.model)
+
         self.viewer.cam.trackbodyid = 0
         self.viewer.cam.elevation = -90
         self.viewer.cam.distance = 4.85 
+        self.viewer.cam.height = 100
+        self.viewer.cam.width = 100
 

@@ -26,15 +26,6 @@ def run(env_id, seed, noise_type, layer_norm, evaluation, **kwargs):
 
     # Create envs.
     env = gym.make(env_id)
-    env = bench.Monitor(env, logger.get_dir() and os.path.join(logger.get_dir(), str(rank)))
-    gym.logger.setLevel(logging.WARN)
-
-    if evaluation and rank==0:
-        eval_env = gym.make(env_id)
-        eval_env = bench.Monitor(eval_env, os.path.join(logger.get_dir(), 'gym_eval'))
-        env = bench.Monitor(env, None)
-    else:
-        eval_env = None
 
     # Parse noise_type
     action_noise = None
@@ -57,7 +48,8 @@ def run(env_id, seed, noise_type, layer_norm, evaluation, **kwargs):
             raise RuntimeError('unknown noise type "{}"'.format(current_noise_type))
 
     # Configure components.
-    memory = Memory(limit=int(1e6), state_shape=state_shape, action_shape=env.action_space.shape, observation_shape=env.observation_space.shape)
+    print(env.state_space.shape, env.action_space.shape, env.observation_space.shape)
+    memory = Memory(limit=int(1e6), state_shape=env.state_space.shape, action_shape=env.action_space.shape, observation_shape=env.observation_space.shape)
     critic = Critic(layer_norm=layer_norm)
     actor = Actor(nb_actions, layer_norm=layer_norm)
 
