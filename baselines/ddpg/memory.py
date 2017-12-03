@@ -6,6 +6,8 @@ class RingBuffer(object):
         self.maxlen = maxlen
         self.start = 0
         self.length = 0
+
+        print(shape, maxlen)
         self.data = np.zeros((maxlen,) + shape).astype(dtype)
 
     def __len__(self):
@@ -43,16 +45,16 @@ class Memory(object):
     def __init__(self, limit, state_shape, action_shape, observation_shape):
         self.limit = limit
 
-        self.observations0 = RingBuffer(limit, shape=observation_shape)
+        self.observations0 = RingBuffer(limit, shape=observation_shape, dtype='uint8')
         self.actions = RingBuffer(limit, shape=action_shape)
         self.rewards = RingBuffer(limit, shape=(1,))
         self.terminals1 = RingBuffer(limit, shape=(1,))
-        self.observations1 = RingBuffer(limit, shape=observation_shape)
+        self.observations1 = RingBuffer(limit, shape=observation_shape, dtype='uint8')
 
         self.states = RingBuffer(limit, shape=state_shape)
         self.states1 = RingBuffer(limit, shape=state_shape)
         self.goals = RingBuffer(limit, shape=state_shape)
-        self.goal_observations = RingBuffer(limit, shape=observation_shape)
+        self.goal_observations = RingBuffer(limit, shape=observation_shape, dtype='uint8')
         
 
     def sample(self, batch_size):

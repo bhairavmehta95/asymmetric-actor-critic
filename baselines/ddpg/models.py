@@ -20,7 +20,7 @@ class Model(object):
 
 
 class Actor(Model):
-    def __init__(self, nb_actions, name='actor'):
+    def __init__(self, nb_actions, name='actor', layer_norm=None):
         super(Actor, self).__init__(name=name)
         self.nb_actions = nb_actions
         self.layer_norm = layer_norm
@@ -62,7 +62,7 @@ class Actor(Model):
 
 
 class Critic(Model):
-    def __init__(self, name='critic'):
+    def __init__(self, name='critic', layer_norm=None):
         super(Critic, self).__init__(name=name)
         self.layer_norm = layer_norm
 
