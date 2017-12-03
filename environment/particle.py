@@ -13,6 +13,7 @@ from gym import spaces
 from gym import utils
 from gym.envs.mujoco import mujoco_env
 
+t = 0
 
 class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self):
@@ -21,19 +22,10 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self._get_viewer()
 
 
-    def cam_setup(self):
-        self.viewer.cam.trackbodyid = 0
-        self.viewer.cam.elevation = -90
-        self.viewer.cam.distance = 4.90 
-        # self.viewer.cam.lookat[1] += 1
-
-
     def _step(self, a):
-        xposbefore = self.get_body_com("agent")[0]
+        xpos = self.get_body_com("agent")[0]
         self.do_simulation(a, self.frame_skip)
-        xposafter = self.get_body_com("agent")[0]
 
-        print(xposbefore, xposafter)
         state = self.state_vector()
         notdone = np.isfinite(state).all() \
             and state[2] >= 0.2 and state[2] <= 1.0
@@ -41,7 +33,21 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         done = not notdone
         ob = self._get_obs()
-        return ob, state, reward, done
+
+        image_obs = np.zeros([500, 500, 3])
+
+        if self.viewer is not None:
+            data = self.viewer.get_image()
+            
+            img_data = data[0]
+            width = data[1]
+            height = data[2]
+            tmp = np.fromstring(img_data, dtype=np.uint8)
+            image_obs = np.reshape(tmp, [height, width, 3])
+            image_obs = np.flipud(image_obs)
+
+
+        return image_obs, state, reward, done
 
 
     def _get_obs(self):
@@ -58,17 +64,25 @@ class ParticleEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return self._get_obs()
 
 
+    def viewer_setup(self):
+        self.viewer.cam.trackbodyid = 0
+        self.viewer.cam.elevation = -90
+        self.viewer.cam.distance = 4.85 
+
+
 def run():
     env = ParticleEnv()
     env.reset()
-    env.cam_setup()
 
     t = 0
 
     action = None
     while True:
-        env.render()
-        obs, r, done, _ = env.step(0)
+        obs = env.render()
+
+        # print(width, height)
+        # print(obs)
+        obs, state, r, done = env.step(np.random.uniform(low=-0.1, high=0.1))
         if done:
             print('boop!')
             env.reset()
@@ -76,13 +90,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
-# while True:
-#     sim.data.ctrl[0] =  t * 0.0001
-#     sim.data.ctrl[1] =  t* 0.0001
-#     t += 1
-#     sim.step()
-#     viewer.render()
-#     print(viewer.cam.distance)
-#     if t > 100 and os.getenv('TESTING') is not None:
-#         break
