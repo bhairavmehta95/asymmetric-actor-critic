@@ -62,8 +62,6 @@ class Actor(Model):
             x = tf.layers.dense(x, self.nb_actions, kernel_initializer=tf.random_uniform_initializer(minval=-3e-3, maxval=3e-3))
             x = tf.nn.tanh(x)
 
-            print(x.shape, 'is here')
-
         return x
 
 
